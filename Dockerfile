@@ -1,30 +1,34 @@
-# Need to clean this up - had to move to ubuntu:20.04 because
-# weasyprint would not properly show SVG icons under 
-# python:3.8-slim-buster. Using ubuntu increases the image size
-# by 250 MB which is terrible. Need to get weasyprint working
-# on python image
-
-#FROM python:3.8-slim-buster AS builder
+# Using Ubuntu 20.04 due to compatibility issues with weasyprint
 FROM ubuntu:20.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Builder stage dependencies aren't needed by the app at runtime
+# Install dependencies needed only for building the app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     python3-pip \
     gcc
+
+# Copy requirements and install them
 COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
 
-#FROM python:3.8-slim-buster AS app
+# Runtime stage
 FROM ubuntu:20.04 AS app
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Set working directory
 WORKDIR /app
-#RUN apt-get update && apt-get install -y libpq5 python3-cffi python3-brotli libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libpangocairo-1.0-0 \
+
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y libpq5 python3.8 weasyprint=51-2 \
   && rm -rf /var/lib/apt/lists/*
+
+# Copy installed dependencies from the builder stage
 COPY --from=builder /usr/local /usr/local/
+
+# Copy application code
 COPY . .
+
+# Command to run the application
 CMD ["/bin/bash", "run.sh"]
